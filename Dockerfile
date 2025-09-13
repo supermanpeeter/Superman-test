@@ -1,25 +1,28 @@
+# Dockerfile corrigé — Node 20 + bullseye (compatible @whiskeysockets/baileys)
+FROM node:20-bullseye
 
-# Rekòmande: image ki pa gen problèm ak dépôts
-FROM node:18-bullseye
-
+# éviter les prompts apt
 ENV DEBIAN_FRONTEND=noninteractive
+ENV NODE_ENV=production
 WORKDIR /usr/src/app
 
-# Met --no-install-recommends pou limen gwosè imaj la, netwaye apre
+# installer dépendances système nécessaires puis nettoyer
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ffmpeg imagemagick webp && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Kopi fichye package yo an premye pou cache layer npm
+# copier package.json + package-lock.json (si présent) pour tirer parti du cache Docker
 COPY package*.json ./
 
-# Enstale dependances (epi enstale global tools si bezwen)
-RUN npm install && \
-    npm install -g qrcode-terminal pm2
+# installer dépendances node; installer outils globaux si nécessaire
+RUN npm ci --only=production || npm install && \
+    npm install -g qrcode-terminal pm2 --no-fund --no-audit
 
-# Kopi rès kòd la
+# copier le reste du code
 COPY . .
 
+# exposer le port utilisé par l'app
 EXPOSE 5000
 
+# commande de démarrage (assure-toi que "start" est défini dans package.json)
 CMD ["npm", "start"]
